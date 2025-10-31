@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_18", "python311", "python311Packages.pip"]
+
+[phases.install]
+cmds = [
+    "npm install",
+    "pip install youtube-comment-downloader yt-dlp sentiment"
+]
+
+[start]
+cmd = "node server.js"
