@@ -1,0 +1,27 @@
+# Vercel-specific ignores (additional to .gitignore)
+
+# Development files
+*.md
+README.md
+CHANGELOG.md
+docs/
+
+# Development scripts
+scripts/dev/
+dev-tools/
+
+# Large files that shouldn't be deployed
+# Uncomment if you have large files
+# pdfs/very-large-*.pdf
+# images/original-*.jpg
+
+# Test files
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# Development configuration
+.eslintrc.*
+.prettierrc.*
+jest.config.*

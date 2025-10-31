@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Sentiment Analyzer - AI-Powered Comment Analysis</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="animated-bg">
+        <div class="bg-orb orb-1"></div>
+        <div class="bg-orb orb-2"></div>
+        <div class="bg-orb orb-3"></div>
+    </div>
+
+    <!-- Top Navigation Bar - WITH MOBILE MENU -->
+    <nav class="top-nav">
+        <div class="nav-container">
+            <div class="brand">
+                <i class="fab fa-youtube"></i>
+                <span>YouTube Sentiment Analyzer</span>
+                <span class="badge">PRO</span>
+            </div>
+            
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" id="mobileMenuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <!-- Navigation Links -->
+            <div class="nav-links" id="navLinks">
+                <a href="#" onclick="showHistory(); closeMobileMenu()">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </a>
+                <a href="#" onclick="showContactModal(); closeMobileMenu()">
+                    <i class="fas fa-user"></i>
+                    <span>Contact</span>
+                </a>
+                <a href="#" onclick="showAboutModal(); closeMobileMenu()">
+                    <i class="fas fa-info-circle"></i>
+                    <span>About</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="gradient-text">AI-Powered</span>
+                    YouTube Sentiment Analysis
+                </h1>
+                <p class="hero-subtitle">
+                    Extract and analyze ALL comments from any YouTube video. Get instant AI-powered insights with advanced sentiment analysis.
+                     <!-- <strong>No API keys required!</strong> -->
+                </p>
+                
+                <!-- Input Section -->
+                <div class="search-box">
+                    <div class="input-wrapper">
+                        <i class="fab fa-youtube platform-icon"></i>
+                        <input type="text" 
+                               id="videoUrl" 
+                               placeholder="Paste YouTube video URL here (youtube.com, youtu.be, shorts)..."
+                               autocomplete="off">
+                        <button class="clear-btn" onclick="clearInput()" title="Clear">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="options-row">
+                        <select id="maxComments" class="option-select">
+                            <option value="">All Comments</option>
+                            <option value="500">500 Comments</option>
+                            <option value="1000">1,000 Comments</option>
+                            <option value="2000">2,000 Comments</option>
+                            <option value="5000">5,000 Comments</option>
+                        </select>
+                        
+                        <button class="btn-primary" onclick="analyzeVideo()" id="analyzeBtn">
+                            <i class="fas fa-magic"></i>
+                            Analyze Now
+                        </button>
+                    </div>
+
+                    <!-- Platform Help Text -->
+                    <div class="platform-help" id="platformHelp">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Supports all YouTube formats: regular videos, shorts, live streams • 90-100% comment extraction</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Section -->
+        <div class="loading-section" id="loading">
+            <div class="loader-container">
+                <div class="loader-spinner">
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h3 class="loading-title" id="loadingStatus">Initializing AI Engine...</h3>
+                <div class="loading-platform" id="loadingPlatform">
+                    <i class="fab fa-youtube"></i>
+                    <span>YouTube</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="loading-stats">
+                    <span id="progressPercent">0%</span>
+                    <span id="progressStep">Step 1/6</span>
+                    <span id="loadingTime">0:00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Section -->
+        <div class="error-section" id="errorMessage">
+            <i class="fas fa-exclamation-circle"></i>
+            <div>
+                <strong>Analysis Failed</strong>
+                <p id="errorText"></p>
+            </div>
+            <button onclick="hideError()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="results">
+            <!-- Action Header -->
+            <div class="action-header">
+                <div class="action-title">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                        <h2>Analysis Complete</h2>
+                        <div class="platform-tag">
+                            <i class="fab fa-youtube"></i>
+                            <span>YouTube</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="exportToExcel()">
+                        <i class="fas fa-download"></i>
+                        Download Excel
+                    </button>
+                    <button class="action-btn" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i>
+                        PDF
+                    </button>
+                    <button class="action-btn" onclick="shareAnalysis()">
+                        <i class="fas fa-share-alt"></i>
+                        Share
+                    </button>
+                    <button class="action-btn" onclick="printReport()">
+                        <i class="fas fa-print"></i>
+                        Print
+                    </button>
+                    <button class="action-btn" onclick="saveToHistory()">
+                        <i class="fas fa-bookmark"></i>
+                        Save
+                    </button>
+                    <button class="action-btn" onclick="analyzeAnother()">
+                        <i class="fas fa-redo"></i>
+                        New
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalComments">0</div>
+                        <div class="stat-label">Total Comments</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-smile"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="positivePercent">0%</div>
+                        <div class="stat-label">Positive</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon red">
+                        <i class="fas fa-frown"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="negativePercent">0%</div>
+                        <div class="stat-label">Negative</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="avgPolarity">0.00</div>
+                        <div class="stat-label">Avg Polarity</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Card -->
+            <div class="video-card">
+                <div class="video-thumbnail">
+                    <img id="videoThumbnail" src="" alt="Video Thumbnail">
+                    <div class="video-overlay">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    <div class="platform-badge">
+                        <i class="fab fa-youtube"></i>
+                    </div>
+                </div>
+                <div class="video-info">
+                    <h3 id="videoTitle">Video Title</h3>
+                    <div class="video-meta">
+                        <span><i class="fas fa-user"></i> <span id="channelName">Channel</span></span>
+                        <span><i class="fas fa-eye"></i> <span id="viewCount">0</span> views</span>
+                        <span><i class="fas fa-thumbs-up"></i> <span id="likeCount">0</span> likes</span>
+                        <span><i class="fas fa-clock"></i> <span id="duration">0:00</span></span>
+                        <span><i class="fas fa-calendar"></i> <span id="uploadDate">Date</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Analytics Section -->
+            <div class="visual-analytics-section">
+                <h2 class="section-main-title">
+                    <i class="fas fa-chart-area"></i>
+                    Visual Analytics Dashboard
+                </h2>
+                
+                <!-- Top Row: Chart and Detailed Breakdown Side by Side -->
+                <div class="analytics-grid-top">
+                    <!-- Sentiment Distribution Chart -->
+                    <div class="analytics-card chart-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-pie"></i> Sentiment Distribution</h3>
+                            <div class="chart-controls">
+                                <button class="chart-btn active" onclick="showChartType('doughnut')" title="Doughnut Chart">
+                                    <i class="fas fa-circle-notch"></i>
+                                </button>
+                                <button class="chart-btn" onclick="showChartType('bar')" title="Bar Chart">
+                                    <i class="fas fa-chart-bar"></i>
+                                </button>
+                                <button class="chart-btn" onclick="showChartType('pie')" title="Pie Chart">
+                                    <i class="fas fa-chart-pie"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="sentimentChart"></canvas>
+                        </div>
+                        <div class="chart-summary">
+                            <div class="summary-item positive">
+                                <i class="fas fa-smile"></i>
+                                <div>
+                                    <strong id="chartPositive">0%</strong>
+                                    <span>Positive</span>
+                                </div>
+                            </div>
+                            <div class="summary-item neutral">
+                                <i class="fas fa-meh"></i>
+                                <div>
+                                    <strong id="chartNeutral">0%</strong>
+                                    <span>Neutral</span>
+                                </div>
+                            </div>
+                            <div class="summary-item negative">
+                                <i class="fas fa-frown"></i>
+                                <div>
+                                    <strong id="chartNegative">0%</strong>
+                                    <span>Negative</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Breakdown - Vertical Bars -->
+                    <div class="analytics-card breakdown-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-signal"></i> Detailed Breakdown</h3>
+                            <div class="breakdown-toggle">
+                                <button class="toggle-btn active" onclick="toggleBreakdownView('bars')">
+                                    <i class="fas fa-chart-bar"></i>
+                                </button>
+                                <button class="toggle-btn" onclick="toggleBreakdownView('list')">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Bars View -->
+                        <div class="breakdown-view bars-view active" id="barsView">
+                            <div class="sentiment-bars-vertical">
+                                <div class="bar-item-vertical">
+                                    <div class="bar-track-vertical">
+                                        <div class="bar-fill-vertical very-positive" id="veryPositiveBar">
+                                            <span class="bar-percentage"></span>
+                                        </div>
+                                    </div>
+                                    <div class="bar-label-vertical">
+                                        <i class="fas fa-grin-stars"></i>
+                                        <span class="bar-name">Very Positive</span>
+                                        <strong id="veryPositiveCount">0</strong>
+                                    </div>
+                                </div>
+                                
+                                <div class="bar-item-vertical">
+                                    <div class="bar-track-vertical">
+                                        <div class="bar-fill-vertical positive" id="positiveBar">
+                                            <span class="bar-percentage"></span>
+                                        </div>
+                                    </div>
+                                    <div class="bar-label-vertical">
+                                        <i class="fas fa-smile"></i>
+                                        <span class="bar-name">Positive</span>
+                                        <strong id="positiveCount">0</strong>
+                                    </div>
+                                </div>
+                                
+                                <div class="bar-item-vertical">
+                                    <div class="bar-track-vertical">
+                                        <div class="bar-fill-vertical neutral" id="neutralBar">
+                                            <span class="bar-percentage"></span>
+                                        </div>
+                                    </div>
+                                    <div class="bar-label-vertical">
+                                        <i class="fas fa-meh"></i>
+                                        <span class="bar-name">Neutral</span>
+                                        <strong id="neutralCount">0</strong>
+                                    </div>
+                                </div>
+                                
+                                <div class="bar-item-vertical">
+                                    <div class="bar-track-vertical">
+                                        <div class="bar-fill-vertical negative" id="negativeBar">
+                                            <span class="bar-percentage"></span>
+                                        </div>
+                                    </div>
+                                    <div class="bar-label-vertical">
+                                        <i class="fas fa-frown"></i>
+                                        <span class="bar-name">Negative</span>
+                                        <strong id="negativeCount">0</strong>
+                                    </div>
+                                </div>
+                                
+                                <div class="bar-item-vertical">
+                                    <div class="bar-track-vertical">
+                                        <div class="bar-fill-vertical very-negative" id="veryNegativeBar">
+                                            <span class="bar-percentage"></span>
+                                        </div>
+                                    </div>
+                                    <div class="bar-label-vertical">
+                                        <i class="fas fa-angry"></i>
+                                        <span class="bar-name">Very Negative</span>
+                                        <strong id="veryNegativeCount">0</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- List View -->
+                        <div class="breakdown-view list-view" id="listView">
+                            <div class="sentiment-list">
+                                <div class="list-item very-positive">
+                                    <div class="list-icon"><i class="fas fa-grin-stars"></i></div>
+                                    <div class="list-info">
+                                        <span class="list-label">Very Positive</span>
+                                        <div class="list-bar">
+                                            <div class="list-bar-fill" id="veryPositiveListBar"></div>
+                                        </div>
+                                    </div>
+                                    <strong class="list-count" id="veryPositiveListCount">0</strong>
+                                </div>
+                                
+                                <div class="list-item positive">
+                                    <div class="list-icon"><i class="fas fa-smile"></i></div>
+                                    <div class="list-info">
+                                        <span class="list-label">Positive</span>
+                                        <div class="list-bar">
+                                            <div class="list-bar-fill" id="positiveListBar"></div>
+                                        </div>
+                                    </div>
+                                    <strong class="list-count" id="positiveListCount">0</strong>
+                                </div>
+                                
+                                <div class="list-item neutral">
+                                    <div class="list-icon"><i class="fas fa-meh"></i></div>
+                                    <div class="list-info">
+                                        <span class="list-label">Neutral</span>
+                                        <div class="list-bar">
+                                            <div class="list-bar-fill" id="neutralListBar"></div>
+                                        </div>
+                                    </div>
+                                    <strong class="list-count" id="neutralListCount">0</strong>
+                                </div>
+                                
+                                <div class="list-item negative">
+                                    <div class="list-icon"><i class="fas fa-frown"></i></div>
+                                    <div class="list-info">
+                                        <span class="list-label">Negative</span>
+                                        <div class="list-bar">
+                                            <div class="list-bar-fill" id="negativeListBar"></div>
+                                        </div>
+                                    </div>
+                                    <strong class="list-count" id="negativeListCount">0</strong>
+                                </div>
+                                
+                                <div class="list-item very-negative">
+                                    <div class="list-icon"><i class="fas fa-angry"></i></div>
+                                    <div class="list-info">
+                                        <span class="list-label">Very Negative</span>
+                                        <div class="list-bar">
+                                            <div class="list-bar-fill" id="veryNegativeListBar"></div>
+                                        </div>
+                                    </div>
+                                    <strong class="list-count" id="veryNegativeListCount">0</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bottom Row: Word Cloud and Emoji Analysis -->
+                <div class="analytics-grid-bottom">
+                    <!-- Enhanced Word Cloud -->
+                    <div class="analytics-card wordcloud-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-cloud"></i> Most Mentioned Words</h3>
+                            <div class="word-count-badge">Top 30</div>
+                        </div>
+                        <div class="wordcloud-wrapper" id="wordCloud">
+                            <div class="wordcloud-placeholder">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Analyzing comments...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Enhanced Emoji Analysis -->
+                    <div class="analytics-card emoji-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-smile-beam"></i> Emoji Reactions</h3>
+                            <div class="emoji-count-badge">Top 8</div>
+                        </div>
+                        <div class="emoji-grid-enhanced" id="emojiAnalysis">
+                            <div class="emoji-placeholder">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Processing emojis...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights -->
+            <div class="insights-section">
+                <h3><i class="fas fa-lightbulb"></i> AI-Generated Insights</h3>
+                <div class="insights-grid" id="insightsContainer"></div>
+            </div>
+
+            <!-- Comments Tabs -->
+            <div class="comments-section">
+                <div class="tabs-header">
+                    <div class="tabs">
+                        <button class="tab active" onclick="switchTab('all')">
+                            <i class="fas fa-list"></i> All <span class="tab-badge" id="allCount">0</span>
+                        </button>
+                        <button class="tab" onclick="switchTab('positive')">
+                            <i class="fas fa-smile"></i> Positive <span class="tab-badge" id="positiveTabCount">0</span>
+                        </button>
+                        <button class="tab" onclick="switchTab('negative')">
+                            <i class="fas fa-frown"></i> Negative <span class="tab-badge" id="negativeTabCount">0</span>
+                        </button>
+                        <button class="tab" onclick="switchTab('liked')">
+                            <i class="fas fa-heart"></i> Most Liked <span class="tab-badge" id="likedTabCount">0</span>
+                        </button>
+                        <button class="tab" onclick="switchTab('insights')">
+                            <i class="fas fa-gem"></i> Insights <span class="tab-badge" id="insightsTabCount">0</span>
+                        </button>
+                        <button class="tab" onclick="switchTab('questions')">
+                            <i class="fas fa-question-circle"></i> Questions <span class="tab-badge" id="questionsTabCount">0</span>
+                        </button>
+                    </div>
+                    <div class="tab-tools">
+                        <input type="text" id="searchComments" placeholder="Search comments..." onkeyup="filterComments()">
+                        <select id="sortComments" onchange="sortComments()">
+                            <option value="relevance">Relevance</option>
+                            <option value="likes">Most Liked</option>
+                            <option value="recent">Most Recent</option>
+                            <option value="polarity">Sentiment</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="tab-content active" id="tab-all">
+                    <div id="allComments"></div>
+                </div>
+                <div class="tab-content" id="tab-positive">
+                    <div id="positiveComments"></div>
+                </div>
+                <div class="tab-content" id="tab-negative">
+                    <div id="negativeComments"></div>
+                </div>
+                <div class="tab-content" id="tab-liked">
+                    <div id="likedComments"></div>
+                </div>
+                <div class="tab-content" id="tab-insights">
+                    <div id="insightComments"></div>
+                </div>
+                <div class="tab-content" id="tab-questions">
+                    <div id="questionComments"></div>
+                </div>
+            </div>
+
+            <!-- Additional Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="uniqueAuthors">0</div>
+                        <div class="stat-label">Unique Authors</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon pink">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalLikes">0</div>
+                        <div class="stat-label">Total Likes</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon cyan">
+                        <i class="fas fa-reply"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalReplies">0</div>
+                        <div class="stat-label">Replies</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon yellow">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="engagement">0%</div>
+                        <div class="stat-label">Engagement</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>© 2025 YouTube Sentiment Analyzer Pro. AI Analysis - No API Required.</p>
+        <div class="footer-platforms">
+            <i class="fab fa-youtube" title="YouTube Supported"></i>
+        </div>
+        <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.7;">
+            Pure Web Scraping • No API Keys • Unlimited Analysis
+        </p>
+    </footer>
+
+    <!-- History Modal -->
+    <div class="modal" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-history"></i> Analysis History</h2>
+                <button class="modal-close" onclick="closeModal('historyModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="historyContent"></div>
+        </div>
+    </div>
+
+    <!-- Contact Modal -->
+    <div class="modal" id="contactModal">
+        <div class="modal-content contact-modal-content">
+            <div class="modal-header contact-header">
+                <h2><i class="fas fa-user-circle"></i> Developer Contact</h2>
+                <button class="modal-close" onclick="closeModal('contactModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body contact-body">
+                <div class="developer-card">
+                    <div class="developer-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <h3>Anish Kumar</h3>
+                    <p class="developer-title">Full Stack Developer & AI Enthusiast</p>
+                    
+                    <div class="contact-links">
+                        <a href="https://www.linkedin.com/in/meanish11/" target="_blank" class="contact-link linkedin">
+                            <i class="fab fa-linkedin"></i>
+                            <span>LinkedIn Profile</span>
+                        </a>
+                        <a href="https://github.com/meanish11" target="_blank" class="contact-link github">
+                            <i class="fab fa-github"></i>
+                            <span>GitHub Profile</span>
+                        </a>
+                        <!-- <a href="mailto:anish@example.com" class="contact-link email">
+                            <i class="fas fa-envelope"></i>
+                            <span>anish@example.com</span>
+                        </a>
+                        <a href="tel:+919876543210" class="contact-link phone">
+                            <i class="fas fa-phone"></i>
+                            <span>+91 98765 43210</span>
+                        </a> -->
+                    </div>
+                    
+                    <!-- <div class="developer-info">
+                        <h4><i class="fas fa-info-circle"></i> About This Project</h4>
+                        <p>Advanced YouTube sentiment analyzer using AI and web scraping. Built with Node.js, Python, and modern web technologies.</p>
+                        
+                        <div class="tech-stack">
+                            <span class="tech-badge"><i class="fab fa-node-js"></i> Node.js</span>
+                            <span class="tech-badge"><i class="fab fa-python"></i> Python</span>
+                            <span class="tech-badge"><i class="fab fa-js"></i> JavaScript</span>
+                            <span class="tech-badge"><i class="fas fa-brain"></i> AI/ML</span>
+                        </div>
+                    </div> -->
+                    
+                    <div class="location-info">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Bihar, India</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-content about-modal-content">
+            <div class="modal-header about-header">
+                <h2><i class="fas fa-info-circle"></i> About This Project</h2>
+                <button class="modal-close" onclick="closeModal('aboutModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body about-body">
+                <div class="about-section">
+                    <div class="about-hero">
+                        <i class="fas fa-brain"></i>
+                        <h3>YouTube Sentiment Analyzer</h3>
+                        <p class="about-tagline">Advanced AI-Powered Comment Analysis System</p>
+                    </div>
+
+                    <div class="about-content">
+                        <div class="feature-highlight">
+                            <div class="feature-icon">
+                                <i class="fas fa-magic"></i>
+                            </div>
+                            <div class="feature-text">
+                                <h4>What Does It Do?</h4>
+                                <p>This tool analyzes YouTube video comments using advanced sentiment analysis powered by AI and machine learning. It extracts, processes, and visualizes audience opinions to help content creators understand their viewers better.</p>
+                            </div>
+                        </div>
+
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <div class="feature-card-icon">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <h5>AI-Powered Analysis</h5>
+                                <p>Uses advanced natural language processing to understand context, negations, and intensifiers</p>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-icon">
+                                    <i class="fas fa-download"></i>
+                                </div>
+                                <h5>Complete Data Extraction</h5>
+                                <p>Scrapes 90-100% of comments without YouTube API limitations</p>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-icon">
+                                    <i class="fas fa-chart-pie"></i>
+                                </div>
+                                <h5>Visual Analytics</h5>
+                                <p>Beautiful charts, graphs, and insights for easy understanding</p>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-icon">
+                                    <i class="fas fa-lock-open"></i>
+                                </div>
+                                <h5>No API Required</h5>
+                                <p>Works without YouTube API keys - completely free and unlimited</p>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-icon">
+                                    <i class="fas fa-smile-beam"></i>
+                                </div>
+                                <h5>Emoji Analysis</h5>
+                                <p>Understands and analyzes emoji sentiment in comments</p>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-icon">
+                                    <i class="fas fa-file-excel"></i>
+                                </div>
+                                <h5>Export Data</h5>
+                                <p>Download complete analysis as Excel or PDF reports</p>
+                            </div>
+                        </div>
+
+                        <div class="tech-section">
+                            <h4><i class="fas fa-cogs"></i> Technologies Used</h4>
+                            <div class="tech-list">
+                                <div class="tech-item">
+                                    <i class="fab fa-node-js"></i>
+                                    <div>
+                                        <strong>Node.js</strong>
+                                        <span>Backend server and API</span>
+                                    </div>
+                                </div>
+                                <div class="tech-item">
+                                    <i class="fab fa-python"></i>
+                                    <div>
+                                        <strong>Python</strong>
+                                        <span>Web scraping with yt-dlp</span>
+                                    </div>
+                                </div>
+                                <div class="tech-item">
+                                    <i class="fas fa-brain"></i>
+                                    <div>
+                                        <strong>Sentiment Analysis</strong>
+                                        <span>NLP with custom AI models</span>
+                                    </div>
+                                </div>
+                                <div class="tech-item">
+                                    <i class="fab fa-js"></i>
+                                    <div>
+                                        <strong>JavaScript</strong>
+                                        <span>Interactive frontend</span>
+                                    </div>
+                                </div>
+                                <div class="tech-item">
+                                    <i class="fas fa-chart-line"></i>
+                                    <div>
+                                        <strong>Chart.js</strong>
+                                        <span>Data visualization</span>
+                                    </div>
+                                </div>
+                                <div class="tech-item">
+                                    <i class="fas fa-database"></i>
+                                    <div>
+                                        <strong>Local Storage</strong>
+                                        <span>Analysis history</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="capabilities-section">
+                            <h4><i class="fas fa-check-circle"></i> Key Capabilities</h4>
+                            <div class="capabilities-grid">
+                                <div class="capability-item">
+                                    <i class="fas fa-check"></i>
+                                    <span>Handles negations ("not bad" → Positive)</span>
+                                </div>
+                                <div class="capability-item">
+                                    <i class="fas fa-check"></i>
+                                    <span>Understands intensifiers ("very good")</span>
+                                </div>
+                                <div class="capability-item">
+                                    <i class="fas fa-check"></i>
+                                    <span>Analyzes emoji sentiment</span>
+                                </div>
+                                <div class="capability-item">
+                                    <i class="fas fa-check"></i>
+                                    <span>Detects sarcasm (basic)</span>
+                                </div>
+                                <div class="capability-item">
+                                    <i class="fas fa-check"></i>
+                                    <span>Multi-language support (Hindi/English)</span>
+                                </div>
+                                <div class="capability-item">
+                                    <i class="fas fa-check"></i>
+                                    <span>Context-aware analysis</span>
+                                </div>
+                                <div class="capability-item">
+                                    <i class="fas fa-check"></i>
+                                    <span>Real-time processing</span>
+                                </div>
+                                <div class="capability-item">
+                                    <i class="fas fa-check"></i>
+                                    <span>Mobile-responsive design</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="use-cases-section">
+                            <h4><i class="fas fa-users"></i> Who Can Use This?</h4>
+                            <div class="use-cases">
+                                <div class="use-case">
+                                    <i class="fas fa-video"></i>
+                                    <div>
+                                        <strong>Content Creators</strong>
+                                        <p>Understand audience reactions and improve content strategy</p>
+                                    </div>
+                                </div>
+                                <div class="use-case">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <div>
+                                        <strong>Marketers</strong>
+                                        <p>Analyze brand sentiment and campaign performance</p>
+                                    </div>
+                                </div>
+                                <div class="use-case">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <div>
+                                        <strong>Researchers</strong>
+                                        <p>Study social media trends and sentiment patterns</p>
+                                    </div>
+                                </div>
+                                <div class="use-case">
+                                    <i class="fas fa-briefcase"></i>
+                                    <div>
+                                        <strong>Businesses</strong>
+                                        <p>Monitor product feedback and customer sentiment</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stats-showcase">
+                            <div class="stat-showcase">
+                                <div class="stat-number">90-100%</div>
+                                <div class="stat-desc">Comment Extraction Rate</div>
+                            </div>
+                            <div class="stat-showcase">
+                                <div class="stat-number">85-90%</div>
+                                <div class="stat-desc">Sentiment Accuracy</div>
+                            </div>
+                            <div class="stat-showcase">
+                                <div class="stat-number">∞</div>
+                                <div class="stat-desc">No Usage Limits</div>
+                            </div>
+                        </div>
+
+                        <div class="cta-section">
+                            <p><strong>Ready to analyze?</strong> Paste any YouTube video URL and get instant insights!</p>
+                            <button class="cta-button" onclick="closeModal('aboutModal'); document.getElementById('videoUrl').focus();">
+                                <i class="fas fa-play"></i>
+                                Start Analyzing Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
