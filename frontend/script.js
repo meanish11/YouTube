@@ -1,14 +1,35 @@
 // ============================================================================
-//                    YOUTUBE SENTIMENT ANALYZER - COMPLETE FRONTEND
-//                    With Smooth Linear Progress & Enhanced Features
+//                    YOUTUBE SENTIMENT ANALYZER - FRONTEND
+//                    Optimized for Vercel + Render Setup
 // ============================================================================
 
-// const API_BASE_URL = 'http://localhost:3000/api';
-// Automatically detect environment
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000/api'
-    : `${window.location.origin}/api`;
+// ============================================================================
+//                    🔴 IMPORTANT: UPDATE THIS API URL
+// ============================================================================
 
+// TODO: After deploying backend to Render, replace with your actual Render URL
+const RENDER_API_URL = 'https://your-backend-name.onrender.com/api';
+
+// Automatically detect environment and use appropriate API URL
+const API_BASE_URL = (() => {
+    const hostname = window.location.hostname;
+    
+    // Local development
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        console.log('🔧 Running in LOCAL mode');
+        return 'http://localhost:10000/api';
+    }
+    
+    // Production - Vercel deployment calling Render backend
+    console.log('🌐 Running in PRODUCTION mode');
+    return RENDER_API_URL; // Replace with your actual Render backend URL
+})();
+
+console.log('🔗 API Base URL:', API_BASE_URL);
+
+// ============================================================================
+//                    GLOBAL VARIABLES
+// ============================================================================
 
 let analysisData = null;
 let currentChart = null;
@@ -17,13 +38,17 @@ let loadingTimer = null;
 let loadingStartTime = null;
 
 // ============================================================================
-//                         INITIALIZATION
+//                    INITIALIZATION
 // ============================================================================
 
 window.addEventListener('load', () => {
+    console.log('✅ Application loaded');
     document.getElementById('videoUrl').focus();
     loadHistory();
     updateHeaderStats();
+    
+    // Test API connection
+    testAPIConnection();
 });
 
 document.getElementById('videoUrl').addEventListener('keypress', (e) => {
@@ -33,7 +58,33 @@ document.getElementById('videoUrl').addEventListener('keypress', (e) => {
 });
 
 // ============================================================================
-//                         MAIN ANALYSIS FUNCTION
+//                    API CONNECTION TEST
+// ============================================================================
+
+async function testAPIConnection() {
+    try {
+        console.log('🔍 Testing API connection...');
+        const response = await fetch(`${API_BASE_URL}/health`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ API Connected:', data);
+        } else {
+            console.warn('⚠️ API responded with status:', response.status);
+        }
+    } catch (error) {
+        console.error('❌ API Connection Failed:', error.message);
+        console.warn('⚠️ Make sure backend is deployed and URL is correct');
+    }
+}
+
+// ============================================================================
+//                    MAIN ANALYSIS FUNCTION
 // ============================================================================
 
 async function analyzeVideo() {
@@ -64,12 +115,15 @@ async function analyzeVideo() {
     let currentProgress = 0;
     const progressInterval = setInterval(() => {
         if (currentProgress < 90) {
-            currentProgress += 0.5; // Increment by 0.5% every interval
+            currentProgress += 0.5;
             updateLoadingStatus(getLoadingMessage(currentProgress), currentProgress, getLoadingStep(currentProgress));
         }
-    }, 100); // Update every 100ms for smooth animation
+    }, 100);
     
     try {
+        console.log('📤 Sending request to:', `${API_BASE_URL}/analyze`);
+        console.log('📊 Request data:', { videoUrl: urlInput, maxComments });
+        
         const response = await fetch(`${API_BASE_URL}/analyze`, {
             method: 'POST',
             headers: {
@@ -81,12 +135,15 @@ async function analyzeVideo() {
             })
         });
         
+        console.log('📥 Response status:', response.status);
+        
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Server error occurred');
+            throw new Error(errorData.error || `Server error: ${response.status}`);
         }
         
         const data = await response.json();
+        console.log('✅ Analysis complete:', data);
         
         if (!data.success) {
             throw new Error(data.error || 'Analysis failed');
@@ -96,11 +153,9 @@ async function analyzeVideo() {
             throw new Error('No comments found on this video');
         }
         
-        // Complete the progress
         clearInterval(progressInterval);
         currentProgress = 90;
         
-        // Show final stages with smooth animation
         for (let i = 90; i <= 100; i += 2) {
             updateLoadingStatus(getLoadingMessage(i), i, getLoadingStep(i));
             await sleep(50);
@@ -123,8 +178,19 @@ async function analyzeVideo() {
         
     } catch (error) {
         clearInterval(progressInterval);
-        console.error('Analysis error:', error);
-        showError(error.message || 'An error occurred during analysis');
+        console.error('❌ Analysis error:', error);
+        
+        // Provide helpful error messages
+        let errorMessage = error.message;
+        if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'Cannot connect to backend server. Please check if backend is deployed and URL is correct in script.js';
+        } else if (error.message.includes('NetworkError')) {
+            errorMessage = 'Network error. Please check your internet connection and backend URL';
+        } else if (error.message.includes('CORS')) {
+            errorMessage = 'CORS error. Please check backend CORS configuration';
+        }
+        
+        showError(errorMessage);
         hideLoading();
         enableAnalyzeButton();
         stopLoadingTimer();
@@ -152,7 +218,7 @@ function getLoadingStep(progress) {
 }
 
 // ============================================================================
-//                         URL VALIDATION
+//                    URL VALIDATION
 // ============================================================================
 
 function isValidYouTubeURL(url) {
@@ -167,22 +233,19 @@ function isValidYouTubeURL(url) {
 }
 
 // ============================================================================
-//                         DISPLAY FUNCTIONS
+//                    DISPLAY FUNCTIONS
 // ============================================================================
 
 function displayResults(data) {
-    console.log('Displaying results:', data);
+    console.log('🎨 Displaying results:', data);
     
-    // Update summary cards with animation
     animateValue('totalComments', 0, data.statistics.totalComments, 1000);
     animateValue('positivePercent', 0, parseFloat(data.statistics.positivePercent), 1000, '%', 1);
     animateValue('negativePercent', 0, parseFloat(data.statistics.negativePercent), 1000, '%', 1);
     animateValue('avgPolarity', 0, parseFloat(data.statistics.avgPolarity), 1000, '', 2);
     
-    // Update video info
     const metadata = data.metadata || {};
     
-    // Update thumbnail with error handling
     const thumbnailImg = document.getElementById('videoThumbnail');
     if (metadata.thumbnail) {
         thumbnailImg.src = metadata.thumbnail;
@@ -220,31 +283,14 @@ function displayResults(data) {
     document.getElementById('duration').textContent = metadata.duration || 'N/A';
     document.getElementById('uploadDate').textContent = metadata.uploadDate || 'N/A';
     
-    // Update sentiment bars (VERTICAL)
     updateDetailedSentimentBars(data.statistics, data.comments);
-    
-    // Create chart
     createSentimentChart(data.statistics);
-    
-    // Generate word cloud
     generateWordCloud(data.comments);
-    
-    // Display insights
     displayEnhancedInsights(data.insights);
-    
-    // Emoji analysis
     displayEmojiAnalysis(data.comments);
-    
-    // Display comments
     displayCommentsInTabs(data.comments);
-    
-    // Update statistics
     updateStatsDashboard(data.statistics, data.comments);
-    
-    // Update tab counts
     updateTabCounts(data.comments);
-    
-    // Update header stats
     updateHeaderStats();
 }
 
@@ -263,14 +309,45 @@ function updateDetailedSentimentBars(stats, comments) {
     
     const total = comments.length;
     
-    updateBar('veryPositiveBar', 'veryPositiveCount', sentimentCounts['Very Positive'], total);
-    updateBar('positiveBar', 'positiveCount', sentimentCounts['Positive'], total);
-    updateBar('neutralBar', 'neutralCount', sentimentCounts['Neutral'], total);
-    updateBar('negativeBar', 'negativeCount', sentimentCounts['Negative'], total);
-    updateBar('veryNegativeBar', 'veryNegativeCount', sentimentCounts['Very Negative'], total);
+    updateVerticalBar('veryPositiveBar', 'veryPositiveCount', sentimentCounts['Very Positive'], total);
+    updateVerticalBar('positiveBar', 'positiveCount', sentimentCounts['Positive'], total);
+    updateVerticalBar('neutralBar', 'neutralCount', sentimentCounts['Neutral'], total);
+    updateVerticalBar('negativeBar', 'negativeCount', sentimentCounts['Negative'], total);
+    updateVerticalBar('veryNegativeBar', 'veryNegativeCount', sentimentCounts['Very Negative'], total);
+    
+    updateListBar('veryPositiveListBar', 'veryPositiveListCount', sentimentCounts['Very Positive'], total);
+    updateListBar('positiveListBar', 'positiveListCount', sentimentCounts['Positive'], total);
+    updateListBar('neutralListBar', 'neutralListCount', sentimentCounts['Neutral'], total);
+    updateListBar('negativeListBar', 'negativeListCount', sentimentCounts['Negative'], total);
+    updateListBar('veryNegativeListBar', 'veryNegativeListCount', sentimentCounts['Very Negative'], total);
+    
+    document.getElementById('chartPositive').textContent = stats.positivePercent + '%';
+    document.getElementById('chartNeutral').textContent = stats.neutralPercent + '%';
+    document.getElementById('chartNegative').textContent = stats.negativePercent + '%';
 }
 
-function updateBar(barId, countId, count, total) {
+function updateVerticalBar(barId, countId, count, total) {
+    const percentage = ((count / total) * 100).toFixed(1);
+    const bar = document.getElementById(barId);
+    const countElem = document.getElementById(countId);
+    
+    if (bar && countElem) {
+        countElem.textContent = count;
+        
+        const percentSpan = bar.querySelector('.bar-percentage');
+        
+        setTimeout(() => {
+            bar.style.height = percentage + '%';
+            if (percentSpan && parseFloat(percentage) > 15) {
+                percentSpan.textContent = percentage + '%';
+            } else if (percentSpan) {
+                percentSpan.textContent = '';
+            }
+        }, 100);
+    }
+}
+
+function updateListBar(barId, countId, count, total) {
     const percentage = ((count / total) * 100).toFixed(1);
     const bar = document.getElementById(barId);
     const countElem = document.getElementById(countId);
@@ -279,13 +356,25 @@ function updateBar(barId, countId, count, total) {
         countElem.textContent = `${count} (${percentage}%)`;
         
         setTimeout(() => {
-            bar.style.height = percentage + '%'; // CHANGED: height instead of width for vertical
-            if (parseFloat(percentage) > 10) {
-                bar.textContent = percentage + '%';
-            } else {
-                bar.textContent = '';
-            }
+            bar.style.width = percentage + '%';
         }, 100);
+    }
+}
+
+function toggleBreakdownView(view) {
+    const barsView = document.getElementById('barsView');
+    const listView = document.getElementById('listView');
+    const buttons = document.querySelectorAll('.toggle-btn');
+    
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.closest('.toggle-btn').classList.add('active');
+    
+    if (view === 'bars') {
+        barsView.classList.add('active');
+        listView.classList.remove('active');
+    } else {
+        barsView.classList.remove('active');
+        listView.classList.add('active');
     }
 }
 
@@ -323,16 +412,12 @@ function createSentimentChart(stats) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 500
+            },
             plugins: {
                 legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        font: {
-                            size: 14,
-                            family: 'Inter'
-                        }
-                    }
+                    display: false
                 },
                 tooltip: {
                     callbacks: {
@@ -468,32 +553,26 @@ function displayEmojiAnalysis(comments) {
 }
 
 function displayCommentsInTabs(comments) {
-    // All comments
     displayCommentsList('allComments', comments.slice(0, 50));
     
-    // Positive comments
     const positiveComments = comments.filter(c => 
         c.sentiment === 'Positive' || c.sentiment === 'Very Positive'
     ).sort((a, b) => b.polarity - a.polarity);
     displayCommentsList('positiveComments', positiveComments.slice(0, 30));
     
-    // Negative comments
     const negativeComments = comments.filter(c => 
         c.sentiment === 'Negative' || c.sentiment === 'Very Negative'
     ).sort((a, b) => a.polarity - b.polarity);
     displayCommentsList('negativeComments', negativeComments.slice(0, 30));
     
-    // Most liked
     const likedComments = [...comments].sort((a, b) => b.likes - a.likes);
     displayCommentsList('likedComments', likedComments.slice(0, 30));
     
-    // Unique insights
     const insightComments = comments.filter(c => 
         Math.abs(c.polarity) > 0.5 && c.likes > 5
     );
     displayCommentsList('insightComments', insightComments.slice(0, 30));
     
-    // Questions
     const questionComments = comments.filter(c => c.text.includes('?'));
     displayCommentsList('questionComments', questionComments.slice(0, 30));
 }
@@ -509,9 +588,11 @@ function displayCommentsList(containerId, comments) {
         return;
     }
     
+    const fragment = document.createDocumentFragment();
     comments.forEach(comment => {
-        container.appendChild(createEnhancedCommentCard(comment));
+        fragment.appendChild(createEnhancedCommentCard(comment));
     });
+    container.appendChild(fragment);
 }
 
 function createEnhancedCommentCard(comment) {
@@ -583,7 +664,7 @@ function updateTabCounts(comments) {
 }
 
 // ============================================================================
-//                         TAB SWITCHING & CHART CONTROLS
+//                    TAB SWITCHING & CHART CONTROLS
 // ============================================================================
 
 function switchTab(tabName) {
@@ -653,23 +734,23 @@ function showChartType(type) {
                 }]
             }
         },
-        line: {
-            type: 'line',
+        doughnut: {
+            type: 'doughnut',
             data: {
-                labels: ['Very Positive', 'Positive', 'Neutral', 'Negative', 'Very Negative'],
+                labels: ['Positive', 'Neutral', 'Negative'],
                 datasets: [{
-                    label: 'Comment Count',
                     data: [
-                        parseFloat(stats.veryPositivePercent || 0) * stats.totalComments / 100,
-                        parseFloat(stats.positivePercent) * stats.totalComments / 100,
-                        parseFloat(stats.neutralPercent) * stats.totalComments / 100,
-                        parseFloat(stats.negativePercent) * stats.totalComments / 100,
-                        parseFloat(stats.veryNegativePercent || 0) * stats.totalComments / 100
+                        parseFloat(stats.positivePercent),
+                        parseFloat(stats.neutralPercent),
+                        parseFloat(stats.negativePercent)
                     ],
-                    borderColor: 'rgb(99, 102, 241)',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    tension: 0.4,
-                    fill: true
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(148, 163, 184, 0.8)',
+                        'rgba(239, 68, 68, 0.8)'
+                    ],
+                    borderWidth: 3,
+                    borderColor: '#fff'
                 }]
             }
         }
@@ -680,11 +761,18 @@ function showChartType(type) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 500
+            },
             plugins: {
                 legend: {
-                    position: 'bottom',
-                    labels: {
-                        font: { size: 14, family: 'Inter' }
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed.toFixed(1) + '%';
+                        }
                     }
                 }
             }
@@ -693,7 +781,7 @@ function showChartType(type) {
 }
 
 // ============================================================================
-//                         EXPORT FUNCTIONS
+//                    EXPORT FUNCTIONS
 // ============================================================================
 
 function exportToExcel() {
@@ -704,7 +792,6 @@ function exportToExcel() {
     
     const wb = XLSX.utils.book_new();
     
-    // Sheet 1: Summary
     const summaryData = [
         ['YOUTUBE SENTIMENT ANALYSIS REPORT'],
         [''],
@@ -728,7 +815,6 @@ function exportToExcel() {
     const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, ws1, 'Summary');
     
-    // Sheet 2: All Comments
     const commentsData = analysisData.comments.map(c => ({
         'Row': c.row,
         'Author': c.author,
@@ -743,7 +829,6 @@ function exportToExcel() {
     const ws2 = XLSX.utils.json_to_sheet(commentsData);
     XLSX.utils.book_append_sheet(wb, ws2, 'All Comments');
     
-    // Sheet 3: Key Insights
     const insightsData = analysisData.insights.map(i => ({
         'Category': i.category,
         'Insight': i.insight,
@@ -752,7 +837,6 @@ function exportToExcel() {
     const ws3 = XLSX.utils.json_to_sheet(insightsData);
     XLSX.utils.book_append_sheet(wb, ws3, 'Key Insights');
     
-    // Sheet 4: Top Positive
     const topPositive = analysisData.comments
         .filter(c => c.sentiment.includes('Positive'))
         .sort((a, b) => b.polarity - a.polarity)
@@ -766,7 +850,6 @@ function exportToExcel() {
     const ws4 = XLSX.utils.json_to_sheet(topPositive);
     XLSX.utils.book_append_sheet(wb, ws4, 'Top Positive');
     
-    // Sheet 5: Top Negative
     const topNegative = analysisData.comments
         .filter(c => c.sentiment.includes('Negative'))
         .sort((a, b) => a.polarity - b.polarity)
@@ -780,7 +863,6 @@ function exportToExcel() {
     const ws5 = XLSX.utils.json_to_sheet(topNegative);
     XLSX.utils.book_append_sheet(wb, ws5, 'Top Negative');
     
-    // Download
     const filename = `youtube_analysis_${analysisData.metadata.videoId}_${Date.now()}.xlsx`;
     XLSX.writeFile(wb, filename);
 }
@@ -874,7 +956,7 @@ function printReport() {
 }
 
 // ============================================================================
-//                         HISTORY FUNCTIONS
+//                    HISTORY FUNCTIONS
 // ============================================================================
 
 function addToHistory(data) {
@@ -949,59 +1031,6 @@ function showHistory() {
     modal.classList.add('active');
 }
 
-function showExamples() {
-    const modal = document.getElementById('examplesModal');
-    const content = document.getElementById('examplesContent');
-    
-    const examples = [
-        {
-            title: 'Solar Panel Tutorial (Hindi)',
-            url: 'https://www.youtube.com/watch?v=YrQOXclXSkQ',
-            desc: 'Home solar installation guide with 4,278 comments'
-        },
-        {
-            title: 'Tech Product Review',
-            url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-            desc: 'Popular gadget review video'
-        },
-        {
-            title: 'Educational Content',
-            url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw',
-            desc: 'Science explanation video'
-        }
-    ];
-    
-    content.innerHTML = examples.map(ex => `
-        <div style="padding: 1.5rem; margin-bottom: 1rem; background: #f9fafb; border-radius: 15px; cursor: pointer; transition: all 0.3s;"
-             onclick="loadExample('${ex.url}')"
-             onmouseover="this.style.background='#f3f4f6'; this.style.transform='translateX(5px)'" 
-             onmouseout="this.style.background='#f9fafb'; this.style.transform='translateX(0)'">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                <i class="fab fa-youtube" style="color: #ff0000; font-size: 1.5rem;"></i>
-                <h4 style="margin: 0; color: #1f2937;">${ex.title}</h4>
-            </div>
-            <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 0.75rem;">${ex.desc}</p>
-            <code style="background: white; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; display: block; word-break: break-all; color: #4f46e5;">
-                ${ex.url}
-            </code>
-        </div>
-    `).join('');
-    
-    modal.classList.add('active');
-}
-
-function loadExample(url) {
-    document.getElementById('videoUrl').value = url;
-    closeModal('examplesModal');
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
 function updateHeaderStats() {
     const totalAnalyzed = analysisHistory.length;
     const totalComments = analysisHistory.reduce((sum, item) => sum + item.stats.total, 0);
@@ -1014,7 +1043,67 @@ function updateHeaderStats() {
 }
 
 // ============================================================================
-//                         UTILITY FUNCTIONS
+//                    MODAL FUNCTIONS
+// ============================================================================
+
+function showContactModal() {
+    const modal = document.getElementById('contactModal');
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
+function showAboutModal() {
+    const modal = document.getElementById('aboutModal');
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// ============================================================================
+//                    MOBILE MENU FUNCTIONS
+// ============================================================================
+
+function toggleMobileMenu() {
+    const navLinks = document.getElementById('navLinks');
+    const menuToggle = document.getElementById('mobileMenuToggle');
+    
+    if (navLinks && menuToggle) {
+        navLinks.classList.toggle('active');
+        
+        const icon = menuToggle.querySelector('i');
+        if (navLinks.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+        } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    }
+}
+
+function closeMobileMenu() {
+    const navLinks = document.getElementById('navLinks');
+    const menuToggle = document.getElementById('mobileMenuToggle');
+    
+    if (navLinks && menuToggle) {
+        navLinks.classList.remove('active');
+        
+        const icon = menuToggle.querySelector('i');
+        icon.classList.remove('fa-times');
+        icon.classList.add('fa-bars');
+    }
+}
+
+// ============================================================================
+//                    UTILITY FUNCTIONS
 // ============================================================================
 
 function clearInput() {
@@ -1199,254 +1288,17 @@ function hideError() {
     }
 }
 
-
-// Add after the updateBar function
-
-function toggleBreakdownView(view) {
-    const barsView = document.getElementById('barsView');
-    const listView = document.getElementById('listView');
-    const buttons = document.querySelectorAll('.toggle-btn');
-    
-    buttons.forEach(btn => btn.classList.remove('active'));
-    event.target.closest('.toggle-btn').classList.add('active');
-    
-    if (view === 'bars') {
-        barsView.classList.add('active');
-        listView.classList.remove('active');
-    } else {
-        barsView.classList.remove('active');
-        listView.classList.add('active');
-    }
+function disableAnalyzeButton() {
+    const btn = document.getElementById('analyzeBtn');
+    if (btn) btn.disabled = true;
 }
 
-// Update the updateDetailedSentimentBars function to handle both views
-function updateDetailedSentimentBars(stats, comments) {
-    const sentimentCounts = {
-        'Very Positive': 0,
-        'Positive': 0,
-        'Neutral': 0,
-        'Negative': 0,
-        'Very Negative': 0
-    };
-    
-    comments.forEach(comment => {
-        sentimentCounts[comment.sentiment]++;
-    });
-    
-    const total = comments.length;
-    
-    // Update bars view
-    updateVerticalBar('veryPositiveBar', 'veryPositiveCount', sentimentCounts['Very Positive'], total);
-    updateVerticalBar('positiveBar', 'positiveCount', sentimentCounts['Positive'], total);
-    updateVerticalBar('neutralBar', 'neutralCount', sentimentCounts['Neutral'], total);
-    updateVerticalBar('negativeBar', 'negativeCount', sentimentCounts['Negative'], total);
-    updateVerticalBar('veryNegativeBar', 'veryNegativeCount', sentimentCounts['Very Negative'], total);
-    
-    // Update list view
-    updateListBar('veryPositiveListBar', 'veryPositiveListCount', sentimentCounts['Very Positive'], total);
-    updateListBar('positiveListBar', 'positiveListCount', sentimentCounts['Positive'], total);
-    updateListBar('neutralListBar', 'neutralListCount', sentimentCounts['Neutral'], total);
-    updateListBar('negativeListBar', 'negativeListCount', sentimentCounts['Negative'], total);
-    updateListBar('veryNegativeListBar', 'veryNegativeListCount', sentimentCounts['Very Negative'], total);
-    
-    // Update chart summary
-    document.getElementById('chartPositive').textContent = stats.positivePercent + '%';
-    document.getElementById('chartNeutral').textContent = stats.neutralPercent + '%';
-    document.getElementById('chartNegative').textContent = stats.negativePercent + '%';
+function enableAnalyzeButton() {
+    const btn = document.getElementById('analyzeBtn');
+    if (btn) btn.disabled = false;
 }
 
-function updateVerticalBar(barId, countId, count, total) {
-    const percentage = ((count / total) * 100).toFixed(1);
-    const bar = document.getElementById(barId);
-    const countElem = document.getElementById(countId);
-    
-    if (bar && countElem) {
-        countElem.textContent = count;
-        
-        const percentSpan = bar.querySelector('.bar-percentage');
-        
-        setTimeout(() => {
-            bar.style.height = percentage + '%';
-            if (percentSpan && parseFloat(percentage) > 15) {
-                percentSpan.textContent = percentage + '%';
-            } else if (percentSpan) {
-                percentSpan.textContent = '';
-            }
-        }, 100);
-    }
-}
-
-function updateListBar(barId, countId, count, total) {
-    const percentage = ((count / total) * 100).toFixed(1);
-    const bar = document.getElementById(barId);
-    const countElem = document.getElementById(countId);
-    
-    if (bar && countElem) {
-        countElem.textContent = `${count} (${percentage}%)`;
-        
-        setTimeout(() => {
-            bar.style.width = percentage + '%';
-        }, 100);
-    }
-}
-
-// Update createSentimentChart to use 'doughnut' by default
-function showChartType(type) {
-    if (!analysisData) return;
-    
-    const buttons = document.querySelectorAll('.chart-btn');
-    buttons.forEach(btn => btn.classList.remove('active'));
-    event.target.closest('.chart-btn').classList.add('active');
-    
-    const ctx = document.getElementById('sentimentChart');
-    if (!ctx) return;
-    
-    if (currentChart) {
-        currentChart.destroy();
-    }
-    
-    const stats = analysisData.statistics;
-    
-    const chartConfigs = {
-        bar: {
-            type: 'bar',
-            data: {
-                labels: ['Positive', 'Neutral', 'Negative'],
-                datasets: [{
-                    label: 'Sentiment %',
-                    data: [
-                        parseFloat(stats.positivePercent),
-                        parseFloat(stats.neutralPercent),
-                        parseFloat(stats.negativePercent)
-                    ],
-                    backgroundColor: [
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(148, 163, 184, 0.8)',
-                        'rgba(239, 68, 68, 0.8)'
-                    ]
-                }]
-            }
-        },
-        pie: {
-            type: 'pie',
-            data: {
-                labels: ['Positive', 'Neutral', 'Negative'],
-                datasets: [{
-                    data: [
-                        parseFloat(stats.positivePercent),
-                        parseFloat(stats.neutralPercent),
-                        parseFloat(stats.negativePercent)
-                    ],
-                    backgroundColor: [
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(148, 163, 184, 0.8)',
-                        'rgba(239, 68, 68, 0.8)'
-                    ]
-                }]
-            }
-        },
-        doughnut: {
-            type: 'doughnut',
-            data: {
-                labels: ['Positive', 'Neutral', 'Negative'],
-                datasets: [{
-                    data: [
-                        parseFloat(stats.positivePercent),
-                        parseFloat(stats.neutralPercent),
-                        parseFloat(stats.negativePercent)
-                    ],
-                    backgroundColor: [
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(148, 163, 184, 0.8)',
-                        'rgba(239, 68, 68, 0.8)'
-                    ],
-                    borderWidth: 3,
-                    borderColor: '#fff'
-                }]
-            }
-        }
-    };
-    
-    currentChart = new Chart(ctx, {
-        ...chartConfigs[type],
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.label + ': ' + context.parsed.toFixed(1) + '%';
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Add after showExamples function
-
-function showContactModal() {
-    const modal = document.getElementById('contactModal');
-    if (modal) {
-        modal.classList.add('active');
-    }
-}
-
-// Update the existing showHistory function to keep it working
-// (no changes needed, just making sure it's there)
-
-
-// Add after showContactModal function
-
-function showAboutModal() {
-    const modal = document.getElementById('aboutModal');
-    if (modal) {
-        modal.classList.add('active');
-    }
-}
-
-// Add after the window.onclick function at the end
-
-// Mobile menu functions
-function toggleMobileMenu() {
-    const navLinks = document.getElementById('navLinks');
-    const menuToggle = document.getElementById('mobileMenuToggle');
-    
-    if (navLinks && menuToggle) {
-        navLinks.classList.toggle('active');
-        
-        // Change icon
-        const icon = menuToggle.querySelector('i');
-        if (navLinks.classList.contains('active')) {
-            icon.classList.remove('fa-bars');
-            icon.classList.add('fa-times');
-        } else {
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-bars');
-        }
-    }
-}
-
-function closeMobileMenu() {
-    const navLinks = document.getElementById('navLinks');
-    const menuToggle = document.getElementById('mobileMenuToggle');
-    
-    if (navLinks && menuToggle) {
-        navLinks.classList.remove('active');
-        
-        // Reset icon
-        const icon = menuToggle.querySelector('i');
-        icon.classList.remove('fa-times');
-        icon.classList.add('fa-bars');
-    }
-}
-
-// Close mobile menu when clicking outside
+// Close modals and mobile menu when clicking outside
 window.addEventListener('click', function(event) {
     const navLinks = document.getElementById('navLinks');
     const menuToggle = document.getElementById('mobileMenuToggle');
@@ -1459,72 +1311,7 @@ window.addEventListener('click', function(event) {
         }
     }
     
-    // Existing modal close logic
     if (event.target.classList.contains('modal')) {
         event.target.classList.remove('active');
     }
 });
-
-// ============================================================================
-//                    PERFORMANCE OPTIMIZATIONS
-// ============================================================================
-
-// Debounce function for search
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Lazy load images
-function lazyLoadImages() {
-    const images = document.querySelectorAll('img[data-src]');
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.removeAttribute('data-src');
-                observer.unobserve(img);
-            }
-        });
-    });
-    
-    images.forEach(img => imageObserver.observe(img));
-}
-
-// Virtual scrolling for large comment lists
-function renderVisibleComments(container, comments, startIndex = 0, itemsPerPage = 20) {
-    const fragment = document.createDocumentFragment();
-    const endIndex = Math.min(startIndex + itemsPerPage, comments.length);
-    
-    for (let i = startIndex; i < endIndex; i++) {
-        fragment.appendChild(createEnhancedCommentCard(comments[i]));
-    }
-    
-    container.appendChild(fragment);
-}
-
-
-function disableAnalyzeButton() {
-    const btn = document.getElementById('analyzeBtn');
-    if (btn) btn.disabled = true;
-}
-
-function enableAnalyzeButton() {
-    const btn = document.getElementById('analyzeBtn');
-    if (btn) btn.disabled = false;
-}
-
-// Close modals when clicking outside
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.classList.remove('active');
-    }
-}

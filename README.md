@@ -1,11 +1,11 @@
 # 🎥 YouTube Sentiment Analyzer
 
-Advanced AI-powered sentiment analysis tool for YouTube video comments. Extract, analyze, and visualize audience opinions with 90-100% comment extraction and 92-95% sentiment accuracy.
-
 ![Version](https://img.shields.io/badge/version-3.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)
 ![Python](https://img.shields.io/badge/python-%3E%3D3.8-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+Advanced AI-powered sentiment analysis tool for YouTube video comments. Extract, analyze, and visualize audience opinions with **90-100% comment extraction** and **92-95% sentiment accuracy**.
 
 ## ✨ Features
 
@@ -31,14 +31,12 @@ Advanced AI-powered sentiment analysis tool for YouTube video comments. Extract,
 - **No API Keys Required** - Pure web scraping approach
 - **Unlimited Analysis** - No usage restrictions
 - **Fast Processing** - Batch processing for speed
-- **Full Metadata** - Video info, thumbnails, stats
 
 ### 📱 Modern UI/UX
 - **Mobile Responsive** - Perfect on all devices
 - **Real-time Progress** - Smooth 1-100% loading animation
 - **Interactive Charts** - Toggle between chart types
 - **Export Options** - Download as Excel or PDF
-- **History Tracking** - Save and revisit analyses
 
 ## 🛠️ Tech Stack
 
@@ -50,17 +48,14 @@ Advanced AI-powered sentiment analysis tool for YouTube video comments. Extract,
 
 ### Frontend
 - **Vanilla JavaScript** - No framework dependencies
-- **Chart.js** - Beautiful data visualizations
-- **Font Awesome** - Icon library
-- **CSS3** - Modern animations and transitions
+- **Chart.js** - Data visualizations
+- **Font Awesome** - Icons
+- **CSS3** - Modern animations
 
 ## 📋 Prerequisites
 
-- **Node.js** 14.0.0 or higher
-- **Python** 3.8 or higher
-- **npm** (comes with Node.js)
-- **pip** (comes with Python)
+- **Node.js** 18.0.0 or higher → [Download](https://nodejs.org/)
+- **Python** 3.8 or higher → [Download](https://python.org/)
+- **Git** → [Download](https://git-scm.com/)
 
-## 🚀 Installation
-
-### 1. Clone the Repository
+**Verify Installation:**

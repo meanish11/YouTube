@@ -1,6 +1,6 @@
 // ============================================================================
-//                    YOUTUBE SENTIMENT ANALYZER - COMPLETE SERVER
-//                    With HIGHLY ACCURATE Sentiment Analysis
+//                    YOUTUBE SENTIMENT ANALYZER - BACKEND API
+//                    Optimized for Render + Vercel Setup
 // ============================================================================
 
 const express = require('express');
@@ -11,23 +11,89 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(compression());
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-
-console.log('🚀 YouTube Sentiment Analyzer - Enhanced Version');
+const PORT = process.env.PORT || 10000;
 
 // ============================================================================
-//                    HIGHLY ACCURATE SENTIMENT ANALYZER
+//                    🔴 IMPORTANT: UPDATE THESE URLs
+// ============================================================================
+
+// TODO: After deploying to Vercel, replace with your actual Vercel URL
+const VERCEL_FRONTEND_URL = 'https://your-app-name.vercel.app';
+
+// Allowed origins for CORS
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5000',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5000',
+    VERCEL_FRONTEND_URL, // Your Vercel URL
+    'https://your-app-name-git-main-yourusername.vercel.app', // Vercel preview URLs
+    process.env.FRONTEND_URL, // From Render environment variables
+].filter(Boolean); // Remove undefined values
+
+// ============================================================================
+//                    MIDDLEWARE CONFIGURATION
+// ============================================================================
+
+// CORS Configuration - Allow Vercel frontend to access backend
+app.use(cors({
+    origin: function(origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+        if (!origin) return callback(null, true);
+        
+        // Check if the origin is in allowed list or matches Vercel preview pattern
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('vercel.app')) {
+            return callback(null, true);
+        }
+        
+        const msg = `CORS policy: Origin ${origin} is not allowed. Allowed origins: ${allowedOrigins.join(', ')}`;
+        console.warn('❌ CORS blocked:', msg);
+        return callback(new Error(msg), false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Compression for faster responses
+app.use(compression());
+
+// Body parsers
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging
+app.use((req, res, next) => {
+    console.log(`📨 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'No origin'}`);
+    next();
+});
+
+// ============================================================================
+//                    KEEP RENDER FREE TIER AWAKE (Optional)
+// ============================================================================
+
+// TODO: After deployment, replace with your actual Render URL
+const RENDER_BACKEND_URL = 'https://your-backend-name.onrender.com';
+
+// Ping self every 14 minutes to prevent Render from sleeping
+if (process.env.NODE_ENV === 'production') {
+    const https = require('https');
+    
+    setInterval(() => {
+        https.get(`${RENDER_BACKEND_URL}/api/health`, (res) => {
+            console.log('⏰ Keep-alive ping - Status:', res.statusCode);
+        }).on('error', (err) => {
+            console.error('❌ Keep-alive error:', err.message);
+        });
+    }, 14 * 60 * 1000); // Every 14 minutes
+}
+
+// ============================================================================
+//                    ENHANCED SENTIMENT ANALYZER
 // ============================================================================
 
 const Sentiment = require('sentiment');
 
-// EXPANDED custom words dictionary for better accuracy
 const customWords = {
     // Very Positive (score 5-6)
     'awesome': 5, 'amazing': 5, 'excellent': 5, 'perfect': 6, 'outstanding': 6,
@@ -78,7 +144,6 @@ const customWords = {
     'ghatiya': -4, 'bekaar': -4, 'wahiyat': -3, 'bakvas': -3,
 };
 
-// Enhanced negation words
 const negations = [
     'not', 'no', 'never', 'neither', 'nobody', 'nothing', 'nowhere',
     'cannot', "can't", "won't", "don't", "doesn't", "didn't", "isn't",
@@ -87,7 +152,6 @@ const negations = [
     'rarely', 'seldom', 'without', 'lack', 'lacking', 'lacks'
 ];
 
-// Enhanced intensifiers
 const intensifiers = {
     'very': 1.5, 'really': 1.5, 'extremely': 2.0, 'super': 1.8,
     'absolutely': 2.0, 'totally': 1.5, 'completely': 1.8, 'utterly': 2.0,
@@ -97,7 +161,6 @@ const intensifiers = {
     'especially': 1.4, 'insanely': 2.0, 'ridiculously': 1.8
 };
 
-// Enhanced diminishers
 const diminishers = {
     'slightly': 0.5, 'somewhat': 0.5, 'barely': 0.3, 'hardly': 0.3,
     'little': 0.5, 'bit': 0.5, 'kinda': 0.6, 'kind of': 0.6,
@@ -105,14 +168,12 @@ const diminishers = {
     'rather': 0.7, 'mildly': 0.5, 'moderately': 0.6
 };
 
-// Sarcasm indicators
 const sarcasmIndicators = [
     'yeah right', 'sure', 'obviously', 'clearly', 'totally',
     'great job', 'nice try', 'well done', 'brilliant move',
     'genius idea', 'love that', 'perfect timing'
 ];
 
-// Positive context phrases
 const positiveContexts = [
     'thank you', 'thanks for', 'appreciate', 'well done', 'keep it up',
     'keep up', 'looking forward', 'cant wait', "can't wait", 'excited',
@@ -120,7 +181,6 @@ const positiveContexts = [
     'love this', 'love it', 'this is great', 'this is amazing'
 ];
 
-// Negative context phrases
 const negativeContexts = [
     'waste of time', 'waste time', 'not worth', 'dont recommend',
     "don't recommend", 'disappointed', 'regret', 'mistake', 'avoid',
@@ -129,8 +189,8 @@ const negativeContexts = [
 
 function preprocessText(text) {
     let processed = text.toLowerCase();
-    processed = processed.replace(/https?:\/\/\S+/g, ''); // Remove URLs
-    processed = processed.replace(/[^\w\s!?.'-]/g, ' '); // Keep basic punctuation
+    processed = processed.replace(/https?:\/\/\S+/g, '');
+    processed = processed.replace(/[^\w\s!?.'-]/g, ' ');
     processed = processed.replace(/\s+/g, ' ').trim();
     return processed;
 }
@@ -140,11 +200,10 @@ function handleNegations(words, scores) {
     
     for (let i = 0; i < words.length; i++) {
         if (negations.includes(words[i])) {
-            // Look ahead and flip sentiment of next 1-4 words
             let foundSentiment = false;
             for (let j = i + 1; j < Math.min(i + 5, words.length); j++) {
                 if (processedScores[j] !== 0) {
-                    processedScores[j] = -processedScores[j] * 0.9; // Flip and maintain strength
+                    processedScores[j] = -processedScores[j] * 0.9;
                     foundSentiment = true;
                     break;
                 }
@@ -162,7 +221,6 @@ function handleModifiers(words, scores) {
         const word = words[i];
         const bigramKey = words[i] + ' ' + words[i + 1];
         
-        // Check for bigram modifiers first
         if (intensifiers[bigramKey] || diminishers[bigramKey]) {
             const modifier = intensifiers[bigramKey] || diminishers[bigramKey];
             for (let j = i + 2; j < Math.min(i + 4, words.length); j++) {
@@ -173,7 +231,6 @@ function handleModifiers(words, scores) {
             }
         }
         
-        // Check for intensifiers
         if (intensifiers[word]) {
             for (let j = i + 1; j < Math.min(i + 4, words.length); j++) {
                 if (processedScores[j] !== 0) {
@@ -183,7 +240,6 @@ function handleModifiers(words, scores) {
             }
         }
         
-        // Check for diminishers
         if (diminishers[word]) {
             for (let j = i + 1; j < Math.min(i + 4, words.length); j++) {
                 if (processedScores[j] !== 0) {
@@ -213,7 +269,7 @@ function getEmojiSentiment(text) {
     Object.keys(emojiScores).forEach(emoji => {
         const count = (text.match(new RegExp(emoji, 'g')) || []).length;
         if (count > 0) {
-            emojiScore += emojiScores[emoji] * Math.min(count, 3); // Cap at 3 per emoji
+            emojiScore += emojiScores[emoji] * Math.min(count, 3);
             emojiCount += count;
         }
     });
@@ -224,18 +280,14 @@ function getEmojiSentiment(text) {
 function detectSarcasm(text, polarity) {
     const lowerText = text.toLowerCase();
     
-    // Check for sarcasm indicators with positive sentiment
     if (polarity > 0) {
         for (const indicator of sarcasmIndicators) {
             if (lowerText.includes(indicator)) {
-                // Check if followed by negative context
                 const words = lowerText.split(' ');
                 const indicatorIndex = words.findIndex(w => indicator.includes(w));
                 
                 if (indicatorIndex >= 0) {
                     const contextAfter = words.slice(indicatorIndex, Math.min(indicatorIndex + 5, words.length)).join(' ');
-                    
-                    // If negative words appear after sarcasm indicator
                     const hasNegativeAfter = ['but', 'however', 'though', 'unfortunately'].some(w => contextAfter.includes(w));
                     
                     if (hasNegativeAfter) {
@@ -253,14 +305,12 @@ function checkContextPhrases(text) {
     const lowerText = text.toLowerCase();
     let contextScore = 0;
     
-    // Check positive contexts
     for (const phrase of positiveContexts) {
         if (lowerText.includes(phrase)) {
             contextScore += 2;
         }
     }
     
-    // Check negative contexts
     for (const phrase of negativeContexts) {
         if (lowerText.includes(phrase)) {
             contextScore -= 3;
@@ -298,17 +348,11 @@ function analyzeSentiment(text) {
 
     const originalText = text;
     const processed = preprocessText(text);
-    
-    // Create sentiment analyzer
     const sentiment = new Sentiment();
-    
-    // Analyze with custom words
     const baseResult = sentiment.analyze(processed, { extras: customWords });
-    
     const words = processed.split(/\s+/);
     const wordCount = words.length;
     
-    // Get individual word scores
     let wordScores = words.map(word => {
         if (customWords[word] !== undefined) {
             return customWords[word];
@@ -317,60 +361,42 @@ function analyzeSentiment(text) {
         return result.score;
     });
     
-    // Apply negation handling FIRST
     wordScores = handleNegations(words, wordScores);
-    
-    // Then apply intensifiers/diminishers
     wordScores = handleModifiers(words, wordScores);
     
-    // Calculate adjusted score
     let adjustedScore = wordScores.reduce((sum, score) => sum + score, 0);
-    
-    // Add emoji sentiment
     const emojiAnalysis = getEmojiSentiment(originalText);
     adjustedScore += emojiAnalysis.score;
-    
-    // Add context phrases
     const contextScore = checkContextPhrases(originalText);
     adjustedScore += contextScore;
     
-    // Context adjustments
     const capsRatio = getCapsRatio(originalText);
     const exclamations = hasExclamation(originalText);
     const isQ = isQuestion(originalText);
     
-    // Capslock amplification (yelling)
     if (capsRatio > 0.6 && wordCount > 3) {
         adjustedScore *= 1.2;
     }
     
-    // Exclamation amplification
     if (exclamations > 0) {
         adjustedScore *= (1 + Math.min(exclamations * 0.08, 0.4));
     }
     
-    // Questions are usually more neutral unless strong sentiment
     if (isQ && Math.abs(adjustedScore) < 3) {
         adjustedScore *= 0.6;
     }
     
-    // Normalize by word count with better scaling
     const comparative = adjustedScore / Math.max(Math.sqrt(wordCount), 1);
+    let polarity = Math.tanh(comparative / 2.5);
     
-    // Calculate polarity using tanh for smooth -1 to +1 mapping
-    let polarity = Math.tanh(comparative / 2.5); // Adjusted denominator for better spread
-    
-    // Calculate subjectivity
     const sentimentWordCount = wordScores.filter(s => s !== 0).length;
     const subjectivity = Math.min(1, (sentimentWordCount + emojiAnalysis.count) / wordCount);
     
-    // Enhanced confidence calculation
     const baseConfidence = Math.min(1, Math.abs(polarity) * subjectivity);
     const exclamationBoost = Math.min(exclamations * 0.05, 0.2);
     const emojiBoost = Math.min(emojiAnalysis.count * 0.03, 0.15);
     const confidence = Math.min(1, baseConfidence + exclamationBoost + emojiBoost);
     
-    // Improved classification with adjusted thresholds
     let sentimentLabel;
     
     if (polarity >= 0.5) {
@@ -382,7 +408,6 @@ function analyzeSentiment(text) {
     } else if (polarity <= -0.2) {
         sentimentLabel = 'Negative';
     } else {
-        // For neutral range (-0.2 to 0.2), be more strict
         if (Math.abs(polarity) < 0.05) {
             sentimentLabel = 'Neutral';
         } else if (polarity > 0) {
@@ -392,7 +417,6 @@ function analyzeSentiment(text) {
         }
     }
     
-    // Special case: very short comments with clear sentiment
     if (wordCount <= 3) {
         if (Math.abs(polarity) > 0.4) {
             if (polarity > 0) {
@@ -405,14 +429,12 @@ function analyzeSentiment(text) {
         }
     }
     
-    // Handle sarcasm
     const isSarcastic = detectSarcasm(originalText, polarity);
     if (isSarcastic) {
         polarity = -Math.abs(polarity) * 0.7;
         sentimentLabel = polarity < -0.4 ? 'Negative' : 'Neutral';
     }
     
-    // Edge case: Only emojis
     if (wordCount <= 2 && emojiAnalysis.count > 0) {
         if (emojiAnalysis.score > 3) {
             sentimentLabel = 'Very Positive';
@@ -438,7 +460,7 @@ function analyzeSentiment(text) {
 }
 
 // ============================================================================
-//                    REST OF SERVER CODE (UNCHANGED)
+//                    PYTHON SCRAPER INTEGRATION
 // ============================================================================
 
 function scrapePythonComments(videoUrl, maxComments = null) {
@@ -451,7 +473,10 @@ function scrapePythonComments(videoUrl, maxComments = null) {
         const args = ['scraper.py', videoUrl];
         if (maxComments) args.push(maxComments.toString());
         
+        // Use appropriate Python command based on OS
         const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+        console.log(`🐍 Using Python command: ${pythonCmd}`);
+        
         const python = spawn(pythonCmd, args);
         
         let stdout = '';
@@ -680,12 +705,18 @@ function generateInsights(comments, stats) {
     return insights;
 }
 
+// ============================================================================
+//                    API ROUTES
+// ============================================================================
+
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK',
         version: '3.0',
         sentimentEngine: 'Advanced Multi-Factor Analysis',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development'
     });
 });
 
@@ -700,6 +731,8 @@ app.post('/api/analyze', async (req, res) => {
         console.log(`\n${'='.repeat(70)}`);
         console.log(`🎯 ANALYZING YOUTUBE VIDEO`);
         console.log(`🔗 URL: ${videoUrl}`);
+        console.log(`📊 Max Comments: ${maxComments || 'All'}`);
+        console.log(`🌐 Origin: ${req.headers.origin || 'No origin'}`);
         console.log('='.repeat(70));
         
         const scrapeResult = await scrapePythonComments(videoUrl, maxComments);
@@ -745,30 +778,67 @@ app.post('/api/analyze', async (req, res) => {
     } catch (error) {
         console.error('❌ Analysis error:', error);
         res.status(500).json({ 
-            error: error.message || 'Analysis failed'
+            error: error.message || 'Analysis failed',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
 
+// Root route
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.json({
+        message: 'YouTube Sentiment Analyzer API',
+        version: '3.0',
+        status: 'Active',
+        endpoints: {
+            health: '/api/health',
+            analyze: 'POST /api/analyze'
+        },
+        docs: 'https://github.com/yourusername/youtube-sentiment-analyzer'
+    });
 });
 
-app.listen(PORT, () => {
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ error: 'Endpoint not found' });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+    console.error('💥 Server error:', err);
+    res.status(500).json({ 
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    });
+});
+
+// ============================================================================
+//                    START SERVER
+// ============================================================================
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('\n' + '='.repeat(70));
+    console.log('🎥 YOUTUBE SENTIMENT ANALYZER API - v3.0');
     console.log('='.repeat(70));
-    console.log('🎥 YOUTUBE SENTIMENT ANALYZER - ADVANCED v3.0');
-    console.log('='.repeat(70));
-    console.log(`📡 Server: http://localhost:${PORT}`);
+    console.log(`📡 Server: http://0.0.0.0:${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 Allowed Origins:`);
+    allowedOrigins.forEach(origin => {
+        if (origin) console.log(`   - ${origin}`);
+    });
     console.log(`\n🧠 Advanced Features:`);
     console.log(`   ✓ Enhanced negation handling`);
     console.log(`   ✓ Advanced intensifiers/diminishers`);
     console.log(`   ✓ Context phrase detection`);
     console.log(`   ✓ Improved sarcasm detection`);
     console.log(`   ✓ Better emoji analysis`);
-    console.log(`   ✓ Adjusted sentiment thresholds`);
     console.log(`   ✓ 92-95% accuracy`);
     console.log(`\n🎯 Method: Python Web Scraping + Advanced AI`);
     console.log(`✅ Gets 90-100% of comments`);
     console.log(`✅ No API keys required`);
     console.log('='.repeat(70) + '\n');
+    
+    if (process.env.NODE_ENV === 'production') {
+        console.log('🔄 Keep-alive ping activated (every 14 minutes)');
+    }
 });

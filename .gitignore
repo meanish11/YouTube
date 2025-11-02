@@ -1,6 +1,36 @@
+# Node modules
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+venv/
+env/
+
+# Environment
 .env
-.vercel/
-*.log
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Deployment
+.vercel/
+dist/
+build/
+
+# Logs
+logs/
+*.log
