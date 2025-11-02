@@ -1,219 +1,182 @@
 #!/usr/bin/env python3
-"""
-YouTube Sentiment Analyzer - Enhanced Scraper with Full Metadata
-"""
-
 import sys
 import json
-import re
 from youtube_comment_downloader import YoutubeCommentDownloader, SORT_BY_POPULAR, SORT_BY_RECENT
 
 def extract_video_id(url):
-    """Extract video ID from YouTube URL"""
+    """Extract video ID from various YouTube URL formats"""
+    import re
     patterns = [
-        r'(?:youtube\.com\/watch\?v=)([\w-]+)',
-        r'(?:youtu\.be\/)([\w-]+)',
-        r'(?:youtube\.com\/embed\/)([\w-]+)',
-        r'(?:youtube\.com\/shorts\/)([\w-]+)',
+        r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)',
+        r'youtube\.com\/shorts\/([^&\n?#]+)',
     ]
+    
     for pattern in patterns:
         match = re.search(pattern, url)
         if match:
-            return match.group(1)
+            video_id = match.group(1)
+            print(f"✓ Extracted video ID: {video_id}", file=sys.stderr)
+            return video_id
+    
+    print(f"❌ Could not extract video ID from: {url}", file=sys.stderr)
     return None
 
-def scrape_youtube_comments(video_id, max_comments=None):
-    """Scrape YouTube comments"""
-    print(f"🎬 Scraping YouTube video: {video_id}", file=sys.stderr)
-    
-    downloader = YoutubeCommentDownloader()
-    all_comments = []
-    seen_ids = set()
-    
+def get_video_metadata(video_id):
+    """Get video metadata using yt-dlp"""
     try:
-        # Phase 1: Popular comments
-        print("📥 Phase 1: Fetching popular comments...", file=sys.stderr)
-        popular_count = 0
-        
-        try:
-            for comment in downloader.get_comments_from_url(
-                f'https://www.youtube.com/watch?v={video_id}',
-                sort_by=SORT_BY_POPULAR
-            ):
-                if comment['cid'] not in seen_ids:
-                    seen_ids.add(comment['cid'])
-                    all_comments.append({
-                        'id': comment['cid'],
-                        'author': comment.get('author', 'Unknown'),
-                        'text': comment.get('text', ''),
-                        'likes': int(comment.get('votes', 0)),
-                        'publishedAt': comment.get('time', ''),
-                        'replyCount': 0,
-                        'isReply': False
-                    })
-                    popular_count += 1
-                    
-                    if popular_count % 500 == 0:
-                        print(f"   → {popular_count} popular comments...", file=sys.stderr)
-                
-                if max_comments and len(all_comments) >= max_comments:
-                    break
-        except Exception as e:
-            print(f"   ⚠️  Popular phase: {str(e)[:100]}", file=sys.stderr)
-        
-        print(f"   ✓ Got {popular_count} popular comments", file=sys.stderr)
-        
-        # Phase 2: Recent comments
-        if not max_comments or len(all_comments) < max_comments:
-            print("📥 Phase 2: Fetching recent comments...", file=sys.stderr)
-            recent_count = 0
-            
-            try:
-                for comment in downloader.get_comments_from_url(
-                    f'https://www.youtube.com/watch?v={video_id}',
-                    sort_by=SORT_BY_RECENT
-                ):
-                    if comment['cid'] not in seen_ids:
-                        seen_ids.add(comment['cid'])
-                        all_comments.append({
-                            'id': comment['cid'],
-                            'author': comment.get('author', 'Unknown'),
-                            'text': comment.get('text', ''),
-                            'likes': int(comment.get('votes', 0)),
-                            'publishedAt': comment.get('time', ''),
-                            'replyCount': 0,
-                            'isReply': False
-                        })
-                        recent_count += 1
-                        
-                        if recent_count % 500 == 0:
-                            print(f"   → {recent_count} recent comments...", file=sys.stderr)
-                    
-                    if max_comments and len(all_comments) >= max_comments:
-                        break
-            except Exception as e:
-                print(f"   ⚠️  Recent phase: {str(e)[:100]}", file=sys.stderr)
-            
-            print(f"   ✓ Got {recent_count} additional comments", file=sys.stderr)
-        
-        print(f"✅ TOTAL: {len(all_comments)} YouTube comments", file=sys.stderr)
-        return all_comments
-        
-    except Exception as e:
-        print(f"❌ YouTube error: {str(e)}", file=sys.stderr)
-        return all_comments
-
-def get_youtube_metadata(video_id):
-    """Get YouTube metadata using yt-dlp or direct scraping"""
-    print(f"📺 Fetching video metadata for: {video_id}", file=sys.stderr)
-    
-    try:
-        # Try using yt-dlp if available
         import yt_dlp
+        
+        print(f"📊 Fetching metadata for video: {video_id}", file=sys.stderr)
         
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
             'extract_flat': False,
+            'skip_download': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'http_headers': {
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-us,en;q=0.5',
+            }
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
             
-            # Format duration
-            duration_seconds = info.get('duration', 0)
-            hours = duration_seconds // 3600
-            minutes = (duration_seconds % 3600) // 60
-            seconds = duration_seconds % 60
-            
-            if hours > 0:
-                duration = f"{hours}:{minutes:02d}:{seconds:02d}"
-            else:
-                duration = f"{minutes}:{seconds:02d}"
-            
-            # Format upload date
-            upload_date = info.get('upload_date', '')
-            if upload_date and len(upload_date) == 8:
-                upload_date = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:]}"
-            
             metadata = {
-                'title': info.get('title', 'YouTube Video'),
-                'channel': info.get('uploader', 'Unknown Channel'),
-                'channelId': info.get('channel_id', ''),
-                'description': info.get('description', '')[:500],  # First 500 chars
-                'thumbnail': info.get('thumbnail', f'https://img.youtube.com/vi/{video_id}/maxresdefault.jpg'),
+                'title': info.get('title', 'Unknown'),
+                'channel': info.get('uploader', 'Unknown'),
                 'viewCount': info.get('view_count', 0),
                 'likeCount': info.get('like_count', 0),
-                'commentCount': info.get('comment_count', 0),
-                'duration': duration,
-                'uploadDate': upload_date,
-                'tags': info.get('tags', [])[:10]  # First 10 tags
+                'duration': info.get('duration_string', 'Unknown'),
+                'uploadDate': info.get('upload_date', 'Unknown'),
+                'thumbnail': info.get('thumbnail', ''),
+                'description': info.get('description', '')[:500]
             }
             
-            print(f"   ✓ Fetched: {metadata['title']}", file=sys.stderr)
-            print(f"   ✓ Channel: {metadata['channel']}", file=sys.stderr)
-            print(f"   ✓ Views: {metadata['viewCount']:,}", file=sys.stderr)
-            
+            print(f"✓ Metadata retrieved: {metadata['title']}", file=sys.stderr)
             return metadata
             
-    except ImportError:
-        print("   ⚠️  yt-dlp not installed. Using fallback metadata.", file=sys.stderr)
-        print("   💡 Install: pip install yt-dlp", file=sys.stderr)
     except Exception as e:
-        print(f"   ⚠️  Metadata fetch error: {str(e)[:100]}", file=sys.stderr)
-    
-    # Fallback metadata
-    return {
-        'title': 'YouTube Video',
-        'channel': 'Unknown Channel',
-        'channelId': '',
-        'description': '',
-        'thumbnail': f'https://img.youtube.com/vi/{video_id}/maxresdefault.jpg',
-        'viewCount': 0,
-        'likeCount': 0,
-        'commentCount': 0,
-        'duration': 'N/A',
-        'uploadDate': '',
-        'tags': []
-    }
-
-def scrape_comments(url, max_comments=None):
-    """Main function to scrape YouTube comments with metadata"""
-    
-    video_id = extract_video_id(url)
-    if not video_id:
+        print(f"⚠️  Metadata fetch failed: {str(e)}", file=sys.stderr)
         return {
-            "error": "Could not extract video ID from YouTube URL",
-            "success": False
+            'title': 'Unknown',
+            'channel': 'Unknown',
+            'viewCount': 0,
+            'likeCount': 0,
+            'duration': 'Unknown',
+            'uploadDate': 'Unknown',
+            'thumbnail': '',
+            'description': ''
         }
-    
-    print(f"🎯 Video ID: {video_id}", file=sys.stderr)
-    
-    # Get metadata first
-    metadata = get_youtube_metadata(video_id)
-    
-    # Then get comments
-    comments = scrape_youtube_comments(video_id, max_comments)
-    
-    return {
-        "success": True,
-        "platform": "youtube",
-        "video_id": video_id,
-        "total": len(comments),
-        "comments": comments,
-        "metadata": metadata
-    }
+
+def scrape_comments(video_url, max_comments=None):
+    try:
+        print(f"🎬 Starting scraper...", file=sys.stderr)
+        print(f"📹 Video URL: {video_url}", file=sys.stderr)
+        print(f"📊 Max comments: {max_comments or 'All'}", file=sys.stderr)
+        
+        video_id = extract_video_id(video_url)
+        if not video_id:
+            return {
+                'success': False,
+                'error': 'Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link.',
+                'video_id': None,
+                'total': 0,
+                'comments': [],
+                'metadata': {}
+            }
+        
+        print("📥 Initializing comment downloader...", file=sys.stderr)
+        downloader = YoutubeCommentDownloader()
+        
+        print("📡 Fetching comments from YouTube...", file=sys.stderr)
+        comments = []
+        count = 0
+        
+        try:
+            for comment in downloader.get_comments_from_url(video_url, sort_by=SORT_BY_POPULAR):
+                comments.append({
+                    'id': comment.get('cid', ''),
+                    'author': comment.get('author', 'Unknown'),
+                    'text': comment.get('text', ''),
+                    'likes': int(comment.get('votes', 0)),
+                    'publishedAt': comment.get('time', ''),
+                    'replyCount': 0,
+                    'isReply': False
+                })
+                
+                count += 1
+                
+                if count % 100 == 0:
+                    print(f"   → Scraped {count} comments...", file=sys.stderr)
+                
+                if max_comments and count >= int(max_comments):
+                    print(f"   → Reached limit of {max_comments} comments", file=sys.stderr)
+                    break
+                    
+        except Exception as scrape_error:
+            print(f"⚠️  Scraping error: {str(scrape_error)}", file=sys.stderr)
+            if count == 0:
+                return {
+                    'success': False,
+                    'error': f'Failed to scrape comments: {str(scrape_error)}. The video might have comments disabled or restricted access.',
+                    'video_id': video_id,
+                    'total': 0,
+                    'comments': [],
+                    'metadata': {}
+                }
+        
+        if count == 0:
+            print("⚠️  No comments found!", file=sys.stderr)
+            return {
+                'success': False,
+                'error': 'No comments found. The video might have comments disabled, be age-restricted, or have no comments yet.',
+                'video_id': video_id,
+                'total': 0,
+                'comments': [],
+                'metadata': get_video_metadata(video_id)
+            }
+        
+        print(f"✅ Successfully scraped {count} comments", file=sys.stderr)
+        
+        print("📊 Fetching video metadata...", file=sys.stderr)
+        metadata = get_video_metadata(video_id)
+        
+        result = {
+            'success': True,
+            'video_id': video_id,
+            'total': len(comments),
+            'comments': comments,
+            'metadata': metadata
+        }
+        
+        print(f"✓ Scraping complete: {len(comments)} comments", file=sys.stderr)
+        return result
+        
+    except Exception as e:
+        print(f"❌ Fatal error: {str(e)}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return {
+            'success': False,
+            'error': f'Fatal error: {str(e)}',
+            'video_id': None,
+            'total': 0,
+            'comments': [],
+            'metadata': {}
+        }
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print(json.dumps({
-            "error": "Video URL required",
-            "success": False
+            'success': False,
+            'error': 'No video URL provided'
         }))
         sys.exit(1)
     
-    url = sys.argv[1]
-    max_comments = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] != 'null' else None
+    video_url = sys.argv[1]
+    max_comments = int(sys.argv[2]) if len(sys.argv) > 2 else None
     
-    result = scrape_comments(url, max_comments)
-    print(json.dumps(result))
+    result = scrape_comments(video_url, max_comments)
+    print(json.dumps(result, ensure_ascii=False))

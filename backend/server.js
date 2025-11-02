@@ -470,12 +470,17 @@ function scrapePythonComments(videoUrl, maxComments = null) {
         console.log(`📹 URL: ${videoUrl}`);
         console.log('='.repeat(70));
         
-        const args = ['scraper.py', videoUrl];
+        // Use absolute path to scraper.py
+        const scraperPath = path.join(__dirname, 'scraper.py');
+        const args = [scraperPath, videoUrl];
         if (maxComments) args.push(maxComments.toString());
+        
+        console.log(`📁 Scraper path: ${scraperPath}`);
         
         // Use appropriate Python command based on OS
         const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
         console.log(`🐍 Using Python command: ${pythonCmd}`);
+        console.log(`📋 Arguments: ${args.join(' ')}`);
         
         const python = spawn(pythonCmd, args);
         
