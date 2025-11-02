@@ -8,7 +8,7 @@
 // ============================================================================
 
 // TODO: After deploying backend to Render, replace with your actual Render URL
-const RENDER_API_URL = 'https://your-backend-name.onrender.com/api';
+const RENDER_API_URL = 'https://youtubeanalyzer-1vcp.onrender.com/api';
 
 // Automatically detect environment and use appropriate API URL
 const API_BASE_URL = (() => {
